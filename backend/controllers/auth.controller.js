@@ -4,11 +4,13 @@ import User from "../models/User.js";
 
 const normalizeEmail = (e = "") => String(e).trim().toLowerCase();
 
+const PROD = process.env.NODE_ENV === 'production';
 const setAuthCookie = (res, token) => {
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.COOKIE_SECURE === "true", 
-    sameSite: "lax",
+    secure: PROD, 
+    sameSite: PROD ? 'none' : 'lax',
+     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
