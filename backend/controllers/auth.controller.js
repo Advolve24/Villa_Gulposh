@@ -10,7 +10,7 @@ const setAuthCookie = (res, token) => {
     httpOnly: true,
     secure: PROD, 
     sameSite: PROD ? 'none' : 'lax',
-     path: '/',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
