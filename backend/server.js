@@ -9,13 +9,14 @@ import paymentsRoutes from "./routes/payments.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 
 
+
 const app = express(); 
 app.use(cors({ origin: (process.env.ALLOWED_ORIGINS || "").
   split(",").map(s => s.trim()).filter(Boolean), 
   credentials: true 
 })); 
 
-const WHITELIST = new Set(["http://localhost:5173", "http://localhost:5174", "https://villagulposh.netlify.app", ...RAW,]); 
+
 app.use(express.json()); 
 app.use(cookieParser()); 
 app.use("/api/auth", authRoutes); 
