@@ -16,6 +16,14 @@ app.use(cors({
   .filter(Boolean),
   credentials: true
 }));
+
+const WHITELIST = new Set([
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://villagulposh.netlify.app",      
+  ...RAW,
+]);
+
 app.use(express.json());
 app.use(cookieParser());
 
