@@ -1,3 +1,4 @@
+// backend/server.js
 import "dotenv/config.js";
 import express from "express";
 import mongoose from "mongoose";
@@ -11,10 +12,9 @@ import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
-/* ---------- CORS (Netlify + local + previews) ---------- */
 const RAW = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
-  .map(s => s.trim())
+  .map((s) => s.trim())
   .filter(Boolean);
 
 const WHITELIST = new Set([
@@ -24,12 +24,12 @@ const WHITELIST = new Set([
   ...RAW,
 ]);
 
-// Allow Netlify deploy preview subdomains:
-// https://<preview-id>--villagulposh.netlify.app
+// Allow Netlify deploy-preview subdomains like
+// https://somehash--villagulposh.netlify.app
 const NETLIFY_PREVIEW = /^https:\/\/[a-z0-9-]+--villagulposh\.netlify\.app$/i;
 
 function isAllowed(origin) {
-  if (!origin) return true; // health checks / curl / server-to-server
+  if (!origin) return true; // server-to-server / health checks
   if (WHITELIST.has(origin)) return true;
   if (NETLIFY_PREVIEW.test(origin)) return true;
   return false;
@@ -45,26 +45,34 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.options("*", cors()); // handle preflight
+app.options("*", cors());
 
-/* ---------- Common middleware ---------- */
+/* ---------------- Common middleware ---------------- */
 app.use(express.json());
 app.use(cookieParser());
 
-/* ---------- Routes ---------- */
-app.get("/", (_req, res) => res.send("Villa Gulposh API is running. Try /api/health"));
-app.get("/api/health", (_req, res) => res.json({ ok: true, env: process.env.NODE_ENV || "development" }));
+/* ---------------- Simple root + health ---------------- */
+app.get("/", (_req, res) => {
+  res.send("Villa Gulposh API is running. Try /api/health");
+});
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true, env: process.env.NODE_ENV || "development" });
+});
 
+/* ---------------- Real routes ---------------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/api/admin", adminRoutes);
 
-/* ---------- Start ---------- */
+// Last: 404 JSON (optional)
+app.use((req, res) => {
+  res.status(404).json({ message: "Not found", path: req.originalUrl });
+});
+
+/* ---------------- Start ---------------- */
+const PORT = process.env.PORT || 5000;
 mongoose
   .connect(process.env.MONGO_URL)
-  .then(() => {
-    const port = process.env.PORT || 5000;
-    app.listen(port, () => console.log(`Connected! Running on ${port}`));
-  })
+  .then(() => app.listen(PORT, () => console.log(`Connected! Running on ${PORT}`)))
   .catch(console.error);
