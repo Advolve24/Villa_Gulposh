@@ -55,3 +55,13 @@ export const getBlockedDates = async (req, res) => {
     res.status(500).json({ message: "Failed to load blocked dates" });
   }
 };
+
+
+export const getBlockedDatesAll = async (_req, res) => {
+  const bookings = await Booking.find({ status: { $ne: "cancelled" } })
+    .select("startDate endDate");
+  res.json(bookings.map(b => ({
+    startDate: b.startDate,
+    endDate: b.endDate
+  })));
+};
