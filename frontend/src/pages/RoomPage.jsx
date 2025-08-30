@@ -7,12 +7,38 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import ImageSlider from "../components/ImageSlider";
 
+
+ const toDateOnlyUTC = (d) => {
+   const dt = new Date(d);
+   const [y,m,day] = dt.toISOString().slice(0,10).split("-").map(Number);
+   return new Date(y, m-1, day);
+};
+
+ function mergeRanges(ranges) {
+   if (!ranges.length) return [];
+   const sorted = [...ranges].sort((a,b) => a.from - b.from);
+   const out = [sorted[0]];
+   for (let i = 1; i < sorted.length; i++) {
+     const last = out[out.length - 1];
+     const cur = sorted[i];
+     if (cur.from <= new Date(last.to.getFullYear(), last.to.getMonth(), last.to.getDate() + 1)) {
+       if (cur.to > last.to) last.to = cur.to;
+     } else {
+       out.push(cur);
+     }
+   }
+   return out;
+}
+
+
 export default function RoomPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [blockedByRoom, setBlockedByRoom] = useState({});
+  const [rooms, setRooms] = useState([]);
+
 
   const [room, setRoom] = useState(null);
   const [range, setRange] = useState();     
@@ -20,7 +46,31 @@ export default function RoomPage() {
 
   useEffect(() => {
     api.get(`/rooms/${id}`).then(({ data }) => setRoom(data)).catch(() => setRoom(null));
+    api.get("/rooms").then(({ data }) => setRooms(data));
   }, [id]);
+
+
+ useEffect(() => {
+   if (!rooms.length) return;
+   (async () => {
+     const entries = await Promise.all(
+       rooms.map(async (r) => {
+         const { data } = await api.get(`/rooms/${r._id}/blocked`);
+         const ranges = (data || []).map(b => ({
+           from: toDateOnlyUTC(b.startDate),
+           to:   toDateOnlyUTC(b.endDate),
+         }));
+         return [r._id, ranges];
+       })
+     );
+     setBlockedByRoom(Object.fromEntries(entries));
+   })();
+ }, [rooms]);
+
+const disabledAll = useMemo(() => {
+   const all = Object.values(blockedByRoom).flat();
+   return mergeRanges(all);
+ }, [blockedByRoom]);
 
   // Seed dates + guests from state / query (once)
   useEffect(() => {
