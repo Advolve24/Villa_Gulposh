@@ -12,6 +12,7 @@ export default function RoomPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [blockedByRoom, setBlockedByRoom] = useState({});
 
   const [room, setRoom] = useState(null);
   const [range, setRange] = useState();     
@@ -99,6 +100,28 @@ useEffect(() => {
       },
     });
   };
+
+
+  useEffect(() => {
+  api.get("/rooms").then(async ({ data }) => {
+    const entries = await Promise.all(
+      data.map(async (r) => {
+        const { data: blocked } = await api.get(`/rooms/${r._id}/blocked`);
+        const ranges = (blocked || []).map(b => ({
+          from: new Date(b.startDate),
+          to: new Date(b.endDate),
+        }));
+        return [r._id, ranges];
+      })
+    );
+    setBlockedByRoom(Object.fromEntries(entries));
+  });
+}, []);
+
+const disabledAll = useMemo(() => {
+  const all = Object.values(blockedByRoom).flat();
+  return mergeRanges(all);
+}, [blockedByRoom]);
 
   const allImages = useMemo(() => {
     if (!room) return [];
