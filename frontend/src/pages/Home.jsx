@@ -82,7 +82,9 @@ export default function Home() {
 
       const blocked = blockedByRoom[r._id] || [];
       const conflict = blocked.some((b) => rangesOverlap(s, e, b.from, b.to));
-      return !conflict;
+      if (conflict) return false;
+      if (cap && cap < g) return false;
+      return true;
     });
   }, [rooms, blockedByRoom, range, guests, hasValidRange, hasGuests]);
 
