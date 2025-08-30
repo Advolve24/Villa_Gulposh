@@ -1,39 +1,57 @@
-import { useEffect, useState } from "react";
+// CalendarRange.jsx
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/http";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
-function toDateOnly(d){ const dt=new Date(d); return new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()); }
-function todayDateOnly(){ const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); }
+const toDateOnly = (d) => {
+  const dt = new Date(d);
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+};
+const todayDateOnly = () => {
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+};
 
 /**
  * Props:
- *  - roomId?: string (fetch per-room blocked ranges)
- *  - blockedRanges?: Array<{from:Date,to:Date}> (union provided by parent)
- *  - value, onChange
+ * - roomId?: string            -> fetch & disable that room's blocked range
+ * - blocked?: {from:Date,to:Date}[] -> (Home) union of all blocked ranges
+ * - value, onChange
  */
-export default function CalendarRange({ roomId, blockedRanges = [], value, onChange }) {
-  const [blockedFromRoom, setBlockedFromRoom] = useState([]);
+export default function CalendarRange({ roomId, blocked = [], value, onChange }) {
+  const [blockedRanges, setBlockedRanges] = useState([]);
 
-  // fetch when a specific roomId is provided
+  // When Home passes `blocked`, use it
   useEffect(() => {
-    if (!roomId) { setBlockedFromRoom([]); return; }
+    const normalized = (blocked || []).map((b) => ({
+      from: toDateOnly(b.from),
+      to: toDateOnly(b.to),
+    }));
+    setBlockedRanges(normalized);
+  }, [blocked]);
+
+  // When a room page passes `roomId`, override with that room's blocked days
+  useEffect(() => {
+    if (!roomId) return;
     api.get(`/rooms/${roomId}/blocked`).then(({ data }) => {
-      const ranges = (data || []).map(b => ({ from: toDateOnly(b.startDate), to: toDateOnly(b.endDate) }));
-      setBlockedFromRoom(ranges);
+      const ranges = (data || []).map((b) => ({
+        from: toDateOnly(b.startDate),
+        to: toDateOnly(b.endDate), // inclusive
+      }));
+      setBlockedRanges(ranges);
     });
   }, [roomId]);
 
-  const checkIn  = value?.from ? format(value.from, "dd MMM yyyy") : "Add date";
-  const checkOut = value?.to   ? format(value.to,   "dd MMM yyyy") : "Add date";
+  const checkIn = value?.from ? format(value.from, "dd MMM yyyy") : "Add date";
+  const checkOut = value?.to ? format(value.to, "dd MMM yyyy") : "Add date";
 
-  const disabled = [
-    { before: todayDateOnly() },
-    ...blockedRanges,      // union (from Home) if provided
-    ...blockedFromRoom,    // or per-room ranges if roomId is passed
-  ];
+  const disabled = useMemo(
+    () => [{ before: todayDateOnly() }, ...(blockedRanges || [])],
+    [blockedRanges]
+  );
 
   return (
     <div className="w-full">
@@ -50,6 +68,7 @@ export default function CalendarRange({ roomId, blockedRanges = [], value, onCha
             </span>
           </Button>
         </PopoverTrigger>
+
         <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
           <Calendar
             mode="range"
