@@ -69,16 +69,20 @@ export const login = async (req, res) => {
   }
 };
 
-export const logout = (_req, res) => {
-  try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/",
-    });
-  } catch {}
-  res.json({ message: "Logged out" });
+export const logout = (req, res) => {
+  const isProd =
+    process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true";
+
+  const cookieOpts = {
+    httpOnly: true,
+    secure: isProd,                
+    sameSite: isProd ? "none" : "lax",
+    path: "/",                     
+  };
+  res.clearCookie("token", cookieOpts);
+  res.clearCookie("token", { ...cookieOpts, sameSite: "lax" });
+  res.cookie("token", "", { ...cookieOpts, expires: new Date(0) });
+  return res.json({ message: "Logged out" });
 };
 
 export const me = async (req, res) => {
