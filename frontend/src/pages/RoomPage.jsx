@@ -102,27 +102,6 @@ useEffect(() => {
   };
 
 
-  useEffect(() => {
-  api.get("/rooms").then(async ({ data }) => {
-    const entries = await Promise.all(
-      data.map(async (r) => {
-        const { data: blocked } = await api.get(`/rooms/${r._id}/blocked`);
-        const ranges = (blocked || []).map(b => ({
-          from: new Date(b.startDate),
-          to: new Date(b.endDate),
-        }));
-        return [r._id, ranges];
-      })
-    );
-    setBlockedByRoom(Object.fromEntries(entries));
-  });
-}, []);
-
-const disabledAll = useMemo(() => {
-  const all = Object.values(blockedByRoom).flat();
-  return mergeRanges(all);
-}, [blockedByRoom]);
-
   const allImages = useMemo(() => {
     if (!room) return [];
     return [room.coverImage, ...(room.galleryImages || [])].filter(Boolean);
@@ -173,7 +152,7 @@ const disabledAll = useMemo(() => {
 
         {/* RIGHT: booking card */}
         <div className="w-full md:w-[34%] shadow-lg border p-4 rounded-xl space-y-4">
-          <CalendarRange value={range} onChange={setRange} disabledRanges={disabledAll} />
+          <CalendarRange value={range} onChange={setRange} />
 
 
           <div>
