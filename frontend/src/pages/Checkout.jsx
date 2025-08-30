@@ -86,27 +86,30 @@ export default function Checkout() {
   const total = useMemo(() => (nights ? nights * pricePerNight : 0), [nights, pricePerNight]);
 
   async function ensureAuthed() {
-    if (user) return; // already signed in
+  // if already in the store, you're good
+  if (user) return;
 
-    const { name, email, password, phone } = form;
-    if (!name.trim()) throw new Error("Please enter your name.");
-    if (!isValidEmail(email)) throw new Error("Please enter a valid email address.");
-    if (!isValidPhone(phone)) throw new Error("Please enter a valid phone number.");
-    if (!password.trim()) throw new Error("Please create a password.");
-
-    // Try register; if email exists, fallback to login
-    try {
-      await register(name.trim(), email.trim(), password.trim());
-    } catch (e) {
-      const msg = e?.response?.data?.message || "";
-      const isAlready = /already registered/i.test(msg) || e?.response?.status === 400;
-      if (!isAlready) throw e;
-      await login(email.trim(), password.trim());
-    }
-
-    // hydrate header from cookie/session (optional, but nice)
-    await init();
+  const { name, email, password } = form;
+  if (!name.trim() || !email.trim() || !password.trim()) {
+    throw new Error("Please fill name, email and password.");
   }
+
+  try {
+    await api.post("/auth/register", { name: name.trim(), email: email.trim(), password: password.trim() }, { withCredentials: true });
+    await api.get("/auth/me", { withCredentials: true });
+  } catch (e) {
+    const code = e?.response?.status;
+    const msg  = String(e?.response?.data?.message || "");
+    const already = code === 400 || /already/i.test(msg);
+
+    if (!already) throw e;
+
+    await api.post("/auth/login", { email: email.trim(), password: password.trim() }, { withCredentials: true });
+    await api.get("/auth/me", { withCredentials: true });
+  }
+
+  await init?.();
+}
 
   const proceed = async () => {
     try {
