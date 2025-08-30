@@ -1,31 +1,35 @@
 // src/components/CalendarRange.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/http";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
-// make a local Date using UTC parts (avoids +1/-1 day shifts)
-const utcDateToLocalDateOnly = (d) => {
+function toDateOnly(d) {
   const dt = new Date(d);
-  return new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
-};
-const todayLocal = () => {
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+function todayDateOnly() {
   const t = new Date();
   return new Date(t.getFullYear(), t.getMonth(), t.getDate());
-};
+}
 
-export default function CalendarRange({ roomId, value, onChange }) {
+export default function CalendarRange({
+  roomId,
+  value,
+  onChange,
+  disabledRanges, // ⬅️ NEW (array of {from, to})
+}) {
   const [blockedRanges, setBlockedRanges] = useState([]); // [{ from, to }]
 
+  // When a roomId is given, fetch its blocked ranges
   useEffect(() => {
     if (!roomId) return;
     api.get(`/rooms/${roomId}/blocked`).then(({ data }) => {
-      const ranges = (data || []).map((b) => ({
-        // treat stored start/end as inclusive calendar days
-        from: utcDateToLocalDateOnly(b.startDate),
-        to:   utcDateToLocalDateOnly(b.endDate),
+      const ranges = (data || []).map(b => ({
+        from: toDateOnly(b.startDate),
+        to: toDateOnly(b.endDate),
       }));
       setBlockedRanges(ranges);
     });
@@ -34,10 +38,11 @@ export default function CalendarRange({ roomId, value, onChange }) {
   const checkIn  = value?.from ? format(value.from, "dd MMM yyyy") : "Add date";
   const checkOut = value?.to   ? format(value.to,   "dd MMM yyyy") : "Add date";
 
-  const disabled = [
-    { before: todayLocal() }, // disable past days
-    ...blockedRanges,         // disable each booked day range (inclusive)
-  ];
+  const disabled = useMemo(() => {
+    const base = [{ before: todayDateOnly() }];
+    // prefer explicit disabledRanges if provided, otherwise use fetched room ranges
+    return [...base, ...((disabledRanges && disabledRanges.length ? disabledRanges : blockedRanges))];
+  }, [disabledRanges, blockedRanges]);
 
   return (
     <div className="w-full">
