@@ -40,9 +40,10 @@ export default function Header() {
         {/* Left: logos */}
         <Link to="/" className="flex items-center gap-3">
           <div className="h-10 flex items-center">
-            <img src="/logo1.png" alt="logo1" className="h-full" />
+            
           </div>
-          <div className="p-2 rounded-md shadow">
+          <div className="p-2 rounded-md shadow flex gap-2">
+            <img src="/logo1.png" alt="logo1" className="h-full" />
             <img src="/logo2.png" alt="logo2" className="w-[100px]" />
           </div>
         </Link>
