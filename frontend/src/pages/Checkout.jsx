@@ -85,31 +85,27 @@ export default function Checkout() {
   // If pricing is per guest, change to: nights * pricePerNight * (guests || 1)
   const total = useMemo(() => (nights ? nights * pricePerNight : 0), [nights, pricePerNight]);
 
-  async function ensureAuthed() {
-  // if already in the store, you're good
+ async function ensureAuthed() {
   if (user) return;
 
   const { name, email, password } = form;
-  if (!name.trim() || !email.trim() || !password.trim()) {
+  if (!name?.trim() || !email?.trim() || !password?.trim()) {
     throw new Error("Please fill name, email and password.");
   }
 
   try {
     await api.post("/auth/register", { name: name.trim(), email: email.trim(), password: password.trim() }, { withCredentials: true });
-    await api.get("/auth/me", { withCredentials: true });
   } catch (e) {
-    const code = e?.response?.status;
-    const msg  = String(e?.response?.data?.message || "");
-    const already = code === 400 || /already/i.test(msg);
-
+    const already = e?.response?.status === 400 || /already/i.test(String(e?.response?.data?.message || ""));
     if (!already) throw e;
-
     await api.post("/auth/login", { email: email.trim(), password: password.trim() }, { withCredentials: true });
-    await api.get("/auth/me", { withCredentials: true });
   }
 
-  await init?.();
+  // Force a round-trip that requires the cookie
+  await api.get("/auth/me", { withCredentials: true });
+  await init?.();    // refresh the header/user store
 }
+
 
   const proceed = async () => {
     try {
