@@ -3,12 +3,12 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const normalizeEmail = (e = "") => String(e).trim().toLowerCase();
-const isProd = process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true";
 
 const setAuthCookie = (res, token) => {
   res.cookie("token", token, {
     httpOnly: true,
-    secure: isProd,                 
+    secure: isProd,             
     sameSite: isProd ? "none" : "lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -68,7 +68,7 @@ export const login = async (req, res) => {
   }
 };
 
-export const logout = (req, res) => {
+export const logout = (_req, res) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
