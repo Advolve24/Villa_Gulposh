@@ -9,7 +9,7 @@ const toDateOnlyUTC = (d) => {
   const [y,m,day] = dt.toISOString().slice(0,10).split("-").map(Number);
   return new Date(y, m-1, day);
 };
-const rangesOverlap = (aStart, aEnd, bStart, bEnd) => !(aEnd < bStart || aStart > bEnd);
+const rangesOverlap = (aStart, aEnd, bStart, bEnd) => !(aEnd <= bStart || aStart >= bEnd);
 
 // merge touching/overlapping ranges for efficiency
 function mergeRanges(ranges) {
