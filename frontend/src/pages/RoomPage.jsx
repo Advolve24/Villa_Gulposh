@@ -150,7 +150,8 @@ useEffect(() => {
 
         {/* RIGHT: booking card */}
         <div className="w-full md:w-[34%] shadow-lg border p-4 rounded-xl space-y-4">
-          <CalendarRange roomId={room._id} value={range} onChange={setRange} />
+          <CalendarRange value={range} onChange={setRange} disabledRanges={disabledAll} />
+
 
           <div>
             <label className="block text-sm mb-1">
