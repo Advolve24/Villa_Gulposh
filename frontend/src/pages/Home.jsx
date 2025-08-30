@@ -5,14 +5,12 @@ import RoomCard from "../components/RoomCard";
 import CalendarRange from "../components/CalendarRange";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
-const DAY = 24 * 60 * 60 * 1000;
 const toDateOnly = (d) => {
   const dt = new Date(d);
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 };
-const rangesOverlapOrTouch = (a, b) => a.from <= new Date(b.to.getTime() + DAY) && b.from <= new Date(a.to.getTime() + DAY);
-// If you want strict overlap only, drop the “+ DAY”.
-
+const rangesOverlapOrTouch = (a, b) =>
+  a.from <= new Date(b.to.getTime() + 86400000) && b.from <= new Date(a.to.getTime() + 86400000);
 const rangesOverlap = (aStart, aEnd, bStart, bEnd) => !(aEnd < bStart || aStart > bEnd);
 
 const capacityOf = (room) => {
@@ -33,7 +31,6 @@ export default function Home() {
     api.get("/rooms").then(({ data }) => setRooms(data));
   }, []);
 
-  // Load each room's blocked ranges (for filtering)
   useEffect(() => {
     if (!rooms.length) return;
     (async () => {
@@ -42,7 +39,7 @@ export default function Home() {
           const { data } = await api.get(`/rooms/${r._id}/blocked`);
           const ranges = (data || []).map((b) => ({
             from: toDateOnly(b.startDate),
-            to: toDateOnly(b.endDate),
+            to: toDateOnly(b.endDate), // inclusive to block checkout day as requested
           }));
           return [r._id, ranges];
         })
@@ -51,7 +48,7 @@ export default function Home() {
     })();
   }, [rooms]);
 
-  // 🔒 Merge all blocked ranges (so Home calendar shows disabled days too)
+  // UNION of all blocked ranges (inclusive)
   const globallyDisabled = useMemo(() => {
     const all = Object.values(blockedByRoom).flat();
     if (!all.length) return [];
@@ -64,7 +61,6 @@ export default function Home() {
       const cur = sorted[i];
       const last = merged[merged.length - 1];
       if (rangesOverlapOrTouch(last, cur)) {
-        // merge
         if (cur.to > last.to) last.to = cur.to;
       } else {
         merged.push(cur);
@@ -73,14 +69,12 @@ export default function Home() {
     return merged;
   }, [blockedByRoom]);
 
-  // Filtering (capacity + availability). If you changed overlap to end-exclusive,
-  // adjust here as well.
+  // Filtering by capacity + availability
   const hasValidRange = !!(range?.from && range?.to);
   const hasGuests = !!guests;
 
   const filteredRooms = useMemo(() => {
     if (!hasValidRange || !hasGuests) return rooms;
-
     const s = toDateOnly(range.from);
     const e = toDateOnly(range.to);
     const g = Number(guests);
@@ -88,12 +82,9 @@ export default function Home() {
     return rooms.filter((r) => {
       const cap = capacityOf(r);
       if (cap && cap < g) return false;
-
       const blocked = blockedByRoom[r._id] || [];
       const conflict = blocked.some((b) => rangesOverlap(s, e, toDateOnly(b.from), toDateOnly(b.to)));
-      if (conflict) return false;
-
-      return true;
+      return !conflict;
     });
   }, [rooms, blockedByRoom, range, guests, hasValidRange, hasGuests]);
 
@@ -102,13 +93,9 @@ export default function Home() {
       <h1 className="text-2xl font-heading">Villa Booking</h1>
 
       <div className="flex flex-col md:flex-row gap-3 items-start">
-        {/* Now we pass the merged disabled ranges */}
         <div className="w-full md:w-[50%]">
-          <CalendarRange
-            value={range}
-            onChange={setRange}
-            disabledRanges={globallyDisabled}
-          />
+          {/* ⬇️ pass union of all blocked days so 30/31/1 are blocked everywhere */}
+          <CalendarRange value={range} onChange={setRange} disabledRanges={globallyDisabled} />
         </div>
 
         <div className="w-full md:w-56">
@@ -118,9 +105,7 @@ export default function Home() {
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
               ))}
             </SelectContent>
           </Select>
