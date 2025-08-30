@@ -81,10 +81,10 @@ export default function Home() {
       if (cap && cap < g) return false;
 
       const blocked = blockedByRoom[r._id] || [];
-      const conflict = blocked.some((b) => rangesOverlap(s, e, b.from, b.to));
-      if (conflict) return false;
-      if (cap && cap < g) return false;
-      return true;
+     const conflict = disabledAll.some((b) => rangesOverlap(s, e, b.from, b.to));
+     if (conflict) return false; // global block applies
+     if (cap && cap < g) return false;
+    return true;
     });
   }, [rooms, blockedByRoom, range, guests, hasValidRange, hasGuests]);
 
