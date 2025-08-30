@@ -3,14 +3,15 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const normalizeEmail = (e = "") => String(e).trim().toLowerCase();
-const isProd = process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true";
 
 const setAuthCookie = (res, token) => {
+  const isProd = process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true";
+
   res.cookie("token", token, {
     httpOnly: true,
-    secure: isProd,             
-    sameSite: isProd ? "none" : "lax",
-    path: "/",
+    secure: isProd,             // must be true for SameSite=None
+    sameSite: isProd ? "none" : "lax",  // <-- key change
+    path: "/",                  // good hygiene
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
